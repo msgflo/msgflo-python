@@ -1,0 +1,32 @@
+{
+  "name": "msgflo-python",
+  "description": "Python participant support for MsgFlo",
+  "version": "0.0.1",
+  "author": {
+    "name": "Jon Nordby",
+    "email": "jononor@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/the-grid/msgflo.git"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "undefined/blob/master/LICENSE-MIT"
+    }
+  ],
+  "dependencies": {
+  },
+  "devDependencies": {
+    "chai": "~1.9.0",
+    "coffee-script": "^1.8.0",
+    "mocha": "~1.21.0"
+  },
+  "keywords": [],
+  "bin": {
+  },
+  "scripts": {
+    "test": ""
+  }
+}
