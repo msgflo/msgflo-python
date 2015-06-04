@@ -24,4 +24,4 @@ Run in git
 
 ## License
 
-MIT, see [./LICENSE]
+MIT, see [./LICENSE](./LICENSE)
