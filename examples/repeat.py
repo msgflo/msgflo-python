@@ -10,7 +10,7 @@ class Repeat(msgflo.Participant):
   def __init__(self, role):
     d = {
       'component': 'PythonRepeat',
-      'id': role,
+      'label': 'Repeat input data without change',
     }
     msgflo.Participant.__init__(self, d, role)
 
@@ -30,8 +30,6 @@ def main():
   waiter.wait()
   print "Shutdown"
   sys.stdout.flush()
-
-  return
 
 if __name__ == '__main__':
   logging.basicConfig()

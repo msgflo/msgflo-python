@@ -18,6 +18,7 @@ def addDefaultQueue(p, role):
 
 def normalizeDefinition(d, role):
   # Apply defaults
+  d.setdefault('id', role)
   d.setdefault('icon', 'file-word-o')
   d.setdefault('label', "")
   inports = d.setdefault('inports', [
