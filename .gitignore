@@ -1,0 +1,7 @@
+*.pyc
+*egg-info*
+*.so
+
+gevent/
+haigha/
+

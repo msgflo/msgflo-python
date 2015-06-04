@@ -17,8 +17,9 @@ and [gevent](http://www.gevent.org/).
 
 See [./examples/repeat.py](./examples/repeat.py)
 
-Run
+Run in git
 
+    pip install -r requirements.pip -t .
     python ./examples/repeat.py
 
 ## License
