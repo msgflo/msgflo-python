@@ -1,7 +1,7 @@
 {
   "name": "msgflo-python",
   "description": "Python participant support for MsgFlo",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": {
     "name": "Jon Nordby",
     "email": "jononor@gmail.com"
