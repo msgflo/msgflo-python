@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/the-grid/msgflo.git"
+    "url": "git://github.com/msgflo/msgflo-python.git"
   },
   "licenses": [
     {

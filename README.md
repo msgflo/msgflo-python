@@ -1,6 +1,6 @@
 # msgflo-python: Python participant support for MsgFlo
 
-[MsgFlo](https://github.com/the-grid/msgflo) is a distributed, polyglot FBP (flow-based-programming)
+[MsgFlo](https://github.com/msgflo/msgflo) is a distributed, polyglot FBP (flow-based-programming)
 runtime. It integrates with other FBP tools like the [Flowhub](http://flowhub.io) visual programming IDE.
 This library makes it easy to create MsgFlo participants in Python.
 
