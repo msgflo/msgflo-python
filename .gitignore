@@ -1,6 +1,7 @@
 *.pyc
 *egg-info*
 *.so
+node_modules
 
 gevent/
 haigha/
