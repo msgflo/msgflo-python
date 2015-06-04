@@ -1,0 +1,10 @@
+language: python
+services:
+- rabbitmq
+node_js:
+- '0.10'
+install:
+- npm install
+- pip install -r requirements.pip
+script:
+- npm test
