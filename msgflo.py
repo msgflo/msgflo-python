@@ -45,10 +45,10 @@ class Participant:
     raise NotImplementedError('IParticipant.process()')
 
   def ack(self, msg):
-    self._runtime._channel.ack(msg.delivery_tag)
+    self._runtime._channel.basic.ack(msg.delivery_info["delivery_tag"])
 
   def nack(self, msg):
-    self._runtime._channel.nack(msg.delivery_tag)
+    self._runtime._channel.basic.nack(msg.delivery_info["delivery_tag"])
 
 def sendParticipantDefinition(channel, d):
   msg = haigha_Message(json.dumps(d))
