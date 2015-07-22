@@ -69,7 +69,7 @@ def setupQueue(part, channel, direction, port):
 
   if 'in' in direction:
     channel.queue.declare(queue)
-    channel.basic.consume(queue=queue, consumer=handleInput)
+    channel.basic.consume(queue=queue, consumer=handleInput, no_ack=False)
     print 'subscribed to', queue
     sys.stdout.flush()
   else:
@@ -107,7 +107,7 @@ class GeventEngine(object):
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
-    print "Publising message: %s, %s, %s" % (data,outport,ports)
+    print "Publishing message: %s, %s, %s" % (data,outport,ports)
     sys.stdout.flush()
     serialized = json.dumps(data)
     msg = haigha_Message(serialized)
