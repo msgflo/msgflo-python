@@ -45,10 +45,10 @@ class Participant:
     raise NotImplementedError('IParticipant.process()')
 
   def ack(self, msg):
-    self._runtime._channel.ack(msg.delivery_tag)
+    self._runtime._channel.basic.ack(msg.delivery_info["delivery_tag"])
 
   def nack(self, msg):
-    self._runtime._channel.nack(msg.delivery_tag)
+    self._runtime._channel.basic.nack(msg.delivery_info["delivery_tag"])
 
 def sendParticipantDefinition(channel, d):
   msg = haigha_Message(json.dumps(d))
@@ -69,7 +69,7 @@ def setupQueue(part, channel, direction, port):
 
   if 'in' in direction:
     channel.queue.declare(queue)
-    channel.basic.consume(queue=queue, consumer=handleInput)
+    channel.basic.consume(queue=queue, consumer=handleInput, no_ack=False)
     print 'subscribed to', queue
     sys.stdout.flush()
   else:
@@ -107,7 +107,7 @@ class GeventEngine(object):
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
-    print "Publising message: %s, %s, %s" % (data,outport,ports)
+    print "Publishing message: %s, %s, %s" % (data,outport,ports)
     sys.stdout.flush()
     serialized = json.dumps(data)
     msg = haigha_Message(serialized)
