@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, json
+import sys, os, json, random
 sys.path.append(os.path.abspath("."))
 
 import logging
@@ -18,7 +18,8 @@ def addDefaultQueue(p, role):
 
 def normalizeDefinition(d, role):
   # Apply defaults
-  d.setdefault('id', role)
+  d.setdefault('role', role)
+  d.setdefault('id', d['role'] + str(random.randint(0, 99999)))
   d.setdefault('icon', 'file-word-o')
   d.setdefault('label', "")
   inports = d.setdefault('inports', [
