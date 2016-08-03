@@ -21,7 +21,7 @@
     "chai": "~1.9.0",
     "coffee-script": "^1.8.0",
     "mocha": "~1.21.0",
-    "msgflo": "^0.5.20"
+    "msgflo": "^0.7.7"
   },
   "keywords": [],
   "bin": {},
