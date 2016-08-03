@@ -51,8 +51,13 @@ class Participant:
   def nack(self, msg):
     self._runtime._channel.basic.nack(msg.delivery_info["delivery_tag"])
 
-def sendParticipantDefinition(channel, d):
-  msg = haigha_Message(json.dumps(d))
+def sendParticipantDefinition(channel, definition):
+  m = {
+    'protocol': 'discovery',
+    'command': 'participant',
+    'payload': definition,
+  }
+  msg = haigha_Message(json.dumps(m))
   channel.basic.publish(msg, '', 'fbp')
   print 'sent discovery message', msg
   return
