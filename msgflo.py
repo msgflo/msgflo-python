@@ -33,6 +33,7 @@ def normalizeDefinition(d, role):
 
   return d
 
+# Interface for implementing a Participant. Main thing used by applications
 class Participant:
   def __init__(self, d, role):
     self.definition = normalizeDefinition(d, role)
@@ -51,37 +52,6 @@ class Participant:
   def nack(self, msg):
     self._engine.nack_message(msg)
 
-def sendParticipantDefinition(channel, definition):
-  m = {
-    'protocol': 'discovery',
-    'command': 'participant',
-    'payload': definition,
-  }
-  msg = haigha_Message(json.dumps(m))
-  channel.basic.publish(msg, '', 'fbp')
-  print 'sent discovery message', msg
-  return
-
-def setupQueue(part, channel, direction, port):
-  queue = port['queue']
-
-  def handleInput(msg):
-    print "Received message: %s" % (msg,)
-    sys.stdout.flush()
-
-    msg.data = json.loads(msg.body.decode("utf-8"))
-    part.process(port, msg)
-    return
-
-  if 'in' in direction:
-    channel.queue.declare(queue)
-    channel.basic.consume(queue=queue, consumer=handleInput, no_ack=False)
-    print 'subscribed to', queue
-    sys.stdout.flush()
-  else:
-    channel.exchange.declare(queue, 'fanout')
-    print 'created outqueue', queue
-    sys.stdout.flush()
 
 # Interface for engine/transport implementations
 class Engine(object):
@@ -121,13 +91,13 @@ class AmqpEngine(Engine):
     self.participant = participant
     self.participant._engine = self
 
-    sendParticipantDefinition(self._channel, self.participant.definition)
+    self._send_discovery(self._channel, self.participant.definition)
 
     # Create and configure message exchange and queue
     for p in self.participant.definition['inports']:
-      setupQueue(self.participant, self._channel, 'in', p)
+      self._setup_queue(self.participant, self._channel, 'in', p)
     for p in self.participant.definition['outports']:
-      setupQueue(self.participant, self._channel, 'out', p)
+      self._setup_queue(self.participant, self._channel, 'out', p)
 
   def run(self):
     # Start message pump
@@ -175,6 +145,39 @@ class AmqpEngine(Engine):
       self._conn.close_info,)
     self._conn = None
     return
+
+  def _send_discovery(self, channel, definition):
+    m = {
+      'protocol': 'discovery',
+      'command': 'participant',
+      'payload': definition,
+    }
+    msg = haigha_Message(json.dumps(m))
+    channel.basic.publish(msg, '', 'fbp')
+    print 'sent discovery message', msg
+    return
+
+  def _setup_queue(self, part, channel, direction, port):
+    queue = port['queue']
+
+    def handle_input(msg):
+      print "Received message: %s" % (msg,)
+      sys.stdout.flush()
+
+      msg.data = json.loads(msg.body.decode("utf-8"))
+      part.process(port, msg)
+      return
+
+    if 'in' in direction:
+      channel.queue.declare(queue)
+      channel.basic.consume(queue=queue, consumer=handle_input, no_ack=False)
+      print 'subscribed to', queue
+      sys.stdout.flush()
+    else:
+      channel.exchange.declare(queue, 'fanout')
+      print 'created outqueue', queue
+      sys.stdout.flush()
+
 
 def run(participant, broker=None, done_cb=None):
     if broker is None:
