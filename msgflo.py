@@ -3,7 +3,8 @@
 import sys, os, json, random
 sys.path.append(os.path.abspath("."))
 
-import logging # TODO: use instead of print
+import logging
+logger = logging.getLogger('msgflo')
 
 import gevent
 import gevent.event
@@ -81,7 +82,7 @@ class AmqpEngine(Engine):
     # FIXME: respect self.broker_url
     self._conn = haigha_Connection(transport='gevent',
                                    close_cb=self._connection_closed_cb,
-                                   logger=logging.getLogger())
+                                   logger=logger)
 
     # Create message channel
     self._channel = self._conn.channel()
@@ -111,7 +112,7 @@ class AmqpEngine(Engine):
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
-    print "Publishing message: %s, %s, %s" % (data,outport,ports)
+    logger.debug("Publishing message: %s, %s, %s" % (data,outport,ports))
     sys.stdout.flush()
     serialized = json.dumps(data)
     msg = haigha_Message(serialized)
@@ -132,8 +133,7 @@ class AmqpEngine(Engine):
     return 
   
   def _channel_closed_cb(self, ch):
-    print "AMQP channel closed; close-info: %s" % (
-      self._channel.close_info,)
+    logger.debug("AMQP channel closed; close-info: %s" % (self._channel.close_info,))
     self._channel = None
     
     # Initiate graceful closing of the AMQP broker connection
@@ -141,8 +141,7 @@ class AmqpEngine(Engine):
     return
   
   def _connection_closed_cb(self):
-    print "AMQP broker connection closed; close-info: %s" % (
-      self._conn.close_info,)
+    logger.debug("AMQP broker connection closed; close-info: %s" % (self._conn.close_info,))
     self._conn = None
     return
 
@@ -154,14 +153,14 @@ class AmqpEngine(Engine):
     }
     msg = haigha_Message(json.dumps(m))
     channel.basic.publish(msg, '', 'fbp')
-    print 'sent discovery message', msg
+    logger.debug('sent discovery message', msg)
     return
 
   def _setup_queue(self, part, channel, direction, port):
     queue = port['queue']
 
     def handle_input(msg):
-      print "Received message: %s" % (msg,)
+      logger.debug("Received message: %s" % (msg,))
       sys.stdout.flush()
 
       msg.data = json.loads(msg.body.decode("utf-8"))
@@ -171,11 +170,10 @@ class AmqpEngine(Engine):
     if 'in' in direction:
       channel.queue.declare(queue)
       channel.basic.consume(queue=queue, consumer=handle_input, no_ack=False)
-      print 'subscribed to', queue
-      sys.stdout.flush()
+      logger.debug('subscribed to', queue)
     else:
       channel.exchange.declare(queue, 'fanout')
-      print 'created outqueue', queue
+      logger.debug('created outqueue')
       sys.stdout.flush()
 
 
