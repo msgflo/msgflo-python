@@ -3,7 +3,7 @@
 import sys, os, json, random
 sys.path.append(os.path.abspath("."))
 
-import logging
+import logging # TODO: use instead of print
 
 import gevent
 import gevent.event
@@ -83,25 +83,43 @@ def setupQueue(part, channel, direction, port):
     print 'created outqueue', queue
     sys.stdout.flush()
 
-class GeventEngine(object):
+# Interface for engine/transport implementations
+class Engine(object):
+    def __init__(self, broker):
+        self.broker_url = broker
 
-  def __init__(self, participant, done_cb):
-    self._done_cb = done_cb
-    self.participant = participant
-    self.participant._runtime = self
+    def done_callback(self, done_cb):
+        self._done_cb = done_cb
+
+    def add_participant(self, participant):
+        raise NotImplementedError
+
+    def ack_message(self, msg):
+        raise NotImplementedError
+    def nack_message(self, msg):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
+
+class AmqpEngine(Engine):
+
+  def __init__(self, broker):
+    Engine.__init__(self, broker)
 
     # Connect to AMQP broker with default connection and authentication
-    # settings (assumes broker is on localhost)
+    # FIXME: respect self.broker_url
     self._conn = haigha_Connection(transport='gevent',
                                    close_cb=self._connection_closed_cb,
                                    logger=logging.getLogger())
 
-    # Start message pump
-    self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
-
     # Create message channel
     self._channel = self._conn.channel()
     self._channel.add_close_listener(self._channel_closed_cb)
+
+  def add_participant(self, participant):
+    self.participant = participant
+    self.participant._runtime = self
 
     sendParticipantDefinition(self._channel, self.participant.definition)
 
@@ -110,6 +128,10 @@ class GeventEngine(object):
       setupQueue(self.participant, self._channel, 'in', p)
     for p in self.participant.definition['outports']:
       setupQueue(self.participant, self._channel, 'out', p)
+
+  def run(self):
+    # Start message pump
+    self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
@@ -129,7 +151,8 @@ class GeventEngine(object):
         # Yield to other greenlets so they don't starve
         gevent.sleep()
     finally:
-      self._done_cb()
+      if self._done_cb:
+        self._done_cb()
     return 
   
   def _channel_closed_cb(self, ch):
@@ -147,3 +170,19 @@ class GeventEngine(object):
     self._conn = None
     return
 
+def run(participant, broker=None, done_cb=None):
+    if broker is None:
+        broker = os.environ.get('MSGFLO_BROKER', 'amqp://localhost')
+
+    engine = None
+    if broker.startswith('amqp://'):
+        engine = AmqpEngine(broker)
+    else:
+        raise ValueError("msgflo: No engine implementation found for broker URL %s" % (broker,))
+
+    if done_cb:
+        engine.done_callback(done_cb)
+    engine.add_participant(participant)
+    engine.run()
+
+    return engine

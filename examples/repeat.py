@@ -21,11 +21,10 @@ class Repeat(msgflo.Participant):
 
 def main():
   waiter = gevent.event.AsyncResult()
-  
-  p = Repeat('repeat')
-  msgflo.GeventEngine(p, waiter.set)
-  
-  print "Running"
+  repeater = Repeat('repeat')
+  engine = msgflo.run(repeater, done_cb=waiter.set)
+
+  print "Repeat running on %s" % (engine.broker_url)
   sys.stdout.flush()
   waiter.wait()
   print "Shutdown"
