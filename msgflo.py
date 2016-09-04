@@ -180,7 +180,6 @@ class AmqpEngine(Engine):
     else:
       channel.exchange.declare(queue, 'fanout')
       logger.debug('created outqueue')
-      sys.stdout.flush()
 
 class MqttConnector(threading.Thread):
     def __init__(self, host, port, on_connect, on_message):
@@ -216,10 +215,10 @@ class MqttEngine(Engine):
     self.participant = participant
     self.participant._engine = self
 
-    # FIXME: send discovery message
-
   def run(self):
+    print 'run'
     self.connector.run()
+    print 'running'
 
   def _send(self, outport, msg):
       # FIXME: lookup queue in port info
@@ -234,8 +233,7 @@ class MqttEngine(Engine):
 
   def _on_connect(self, client, userdata, flags, rc):
       print("Connected with result code" + str(rc))
-
-      # FIXME: send discovery message
+      self._send_discovery(self.participant.definition)
 
   def _on_message(self, client, userdata, msg):
       print(msg.topic+" "+str(msg.payload))
@@ -249,6 +247,16 @@ class MqttEngine(Engine):
 
       gevent.spawn(notify)
 
+  def _send_discovery(self, definition):
+    m = {
+      'protocol': 'discovery',
+      'command': 'participant',
+      'payload': definition,
+    }
+    msg = json.dumps(m)
+    self.connector.publish('fbp', msg)
+    logger.debug('sent discovery message', msg)
+    return
 
 def run(participant, broker=None, done_cb=None):
     if broker is None:
