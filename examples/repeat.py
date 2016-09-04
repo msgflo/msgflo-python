@@ -21,7 +21,8 @@ class Repeat(msgflo.Participant):
 
 def main():
   waiter = gevent.event.AsyncResult()
-  repeater = Repeat('repeat')
+  role = sys.argv[1] if len(sys.argv) > 1 else 'repeat'
+  repeater = Repeat(role)
   engine = msgflo.run(repeater, done_cb=waiter.set)
 
   print "Repeat running on %s" % (engine.broker_url)
