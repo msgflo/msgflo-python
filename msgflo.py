@@ -38,18 +38,18 @@ class Participant:
     self.definition = normalizeDefinition(d, role)
 
   def send(self, outport, outdata):
-    if not self._runtime:
+    if not self._engine:
       return
-    self._runtime._send(outport, outdata)
+    self._engine._send(outport, outdata)
 
   def process(self, inport, inmsg):
     raise NotImplementedError('IParticipant.process()')
 
   def ack(self, msg):
-    self._runtime._channel.basic.ack(msg.delivery_info["delivery_tag"])
+    self._engine.ack_message(msg)
 
   def nack(self, msg):
-    self._runtime._channel.basic.nack(msg.delivery_info["delivery_tag"])
+    self._engine.nack_message(msg)
 
 def sendParticipantDefinition(channel, definition):
   m = {
@@ -119,7 +119,7 @@ class AmqpEngine(Engine):
 
   def add_participant(self, participant):
     self.participant = participant
-    self.participant._runtime = self
+    self.participant._engine = self
 
     sendParticipantDefinition(self._channel, self.participant.definition)
 
@@ -132,6 +132,12 @@ class AmqpEngine(Engine):
   def run(self):
     # Start message pump
     self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
+
+  def ack_message(self, msg):
+    self._channel.basic.ack(msg.delivery_info["delivery_tag"])
+
+  def nack_message(self, msg):
+    self._channel.basic.nack(msg.delivery_info["delivery_tag"])
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
