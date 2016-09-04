@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, json, random
+import sys, os, json, random, urlparse
 sys.path.append(os.path.abspath("."))
 
 import logging
@@ -9,8 +9,13 @@ logger = logging.getLogger('msgflo')
 import gevent
 import gevent.event
 
+# AMQP
 from haigha.connection import Connection as haigha_Connection
 from haigha.message import Message as haigha_Message
+
+# MQTT
+import paho.mqtt.client as mqtt
+import threading
 
 def addDefaultQueue(p, role):
   defaultQueue = '%s.%s' % (role, p['id'].upper())
@@ -58,6 +63,7 @@ class Participant:
 class Engine(object):
     def __init__(self, broker):
         self.broker_url = broker
+        self.broker_info = urlparse.urlparse(self.broker_url)
 
     def done_callback(self, done_cb):
         self._done_cb = done_cb
@@ -176,10 +182,35 @@ class AmqpEngine(Engine):
       logger.debug('created outqueue')
       sys.stdout.flush()
 
+class MqttConnector(threading.Thread):
+    def __init__(self, host, port, on_connect, on_message):
+        threading.Thread.__init__(self)
+        self.client = mqtt.Client()
+        self.client.on_connect = on_connect
+        self.client.on_message = on_message
+        if port is None:
+          port = 1883
+        self.client.connect(host, port, 60)
+        self.running = True
+
+    def run(self):
+        try:
+            while self.running:
+                self.client.loop_forever()
+        except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
+            self.running = False
+        except StopIteration:
+            self.client = None
+
+    def publish(self, topic, msg):
+      self.client.publish(topic, msg)
 
 class MqttEngine(Engine):
   def __init__(self, broker):
       Engine.__init__(self, broker)
+      host = self.broker_info.hostname
+      port = self.broker_info.port
+      self.connector = MqttConnector(host, port, self._on_connect, self._on_message) 
 
   def add_participant(self, participant):
     self.participant = participant
@@ -188,13 +219,36 @@ class MqttEngine(Engine):
     # FIXME: send discovery message
 
   def run(self):
-    pass # FIXME: actually connect to broker
+    self.connector.run()
+
+  def _send(self, outport, msg):
+      # FIXME: lookup queue in port info
+      queue = 'fofo.OUT'
+      self.connector.publish(queue, msg)
 
   # TODO: implement ACK/NACK for MQTT
   def ack_message(self, msg):
     pass
   def nack_message(self, msg):
     pass
+
+  def _on_connect(self, client, userdata, flags, rc):
+      print("Connected with result code" + str(rc))
+
+      # FIXME: send discovery message
+
+  def _on_message(self, client, userdata, msg):
+      print(msg.topic+" "+str(msg.payload))
+      def notify():
+          js = json.JSONDecoder()
+          print(msg.payload)
+          pl = js.decode(str(msg.payload))
+          pl["published_at"] = time.time() * 1000
+          for sub in subscriptions[:]:
+              sub.put(json.dumps(pl))
+
+      gevent.spawn(notify)
+
 
 def run(participant, broker=None, done_cb=None):
     if broker is None:
