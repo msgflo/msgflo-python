@@ -22,7 +22,7 @@ transportTests = (g, address) ->
 
   names = Object.keys g.commands
   names.forEach (name) ->
-    heterogenous.testParticipant g, name
+    heterogenous.testParticipant g, name, { broker: address }
 
 describe 'Participants', ->
   g =
