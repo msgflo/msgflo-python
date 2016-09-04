@@ -179,6 +179,25 @@ class AmqpEngine(Engine):
       sys.stdout.flush()
 
 
+class MqttEngine(Engine):
+  def __init__(self, broker):
+      Engine.__init__(self, broker)
+
+  def add_participant(self, participant):
+    self.participant = participant
+    self.participant._engine = self
+
+    # FIXME: send discovery message
+
+  def run(self):
+    pass # FIXME: actually connect to broker
+
+  # TODO: implement ACK/NACK for MQTT
+  def ack_message(self, msg):
+    pass
+  def nack_message(self, msg):
+    pass
+
 def run(participant, broker=None, done_cb=None):
     if broker is None:
         broker = os.environ.get('MSGFLO_BROKER', 'amqp://localhost')
@@ -186,6 +205,8 @@ def run(participant, broker=None, done_cb=None):
     engine = None
     if broker.startswith('amqp://'):
         engine = AmqpEngine(broker)
+    elif broker.startswith('mqtt://'):
+        engine = MqttEngine(broker)
     else:
         raise ValueError("msgflo: No engine implementation found for broker URL %s" % (broker,))
 
