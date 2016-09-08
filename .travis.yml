@@ -18,3 +18,12 @@ before_script:
 - mosquitto -d
 script:
 - npm test
+deploy:
+  provider: pypi
+  user: jonnor
+  password:
+    secure: tfMmX8XohObYT76vdF0qTzS38MtIwodQMw/E43daNTmV/P1qrsoUyI3JA69IHWynpXIFJnoF4r/BW2lNm6ZKctoFY0MJGQdzLWs9yblmFsf8BFubOYHFOzQtMGu7rjYxAvIKnKWpeLibb7RPWKSgmQd1hN5MEONwrItpy7uM/48zOEpVsH54BlOlDG5mWWdA1cXnStW3ORGEdgYLH2mIgFtwsMeLAhKV1vQvltR67/bXtofjDY8XAHrQtHLTOA/se3wwkoyzfXh1c0ZXAR7Ebq+nFU+tFeZcw+bIBN5QwimbnS8O6W91urKHmb2aBd2kHTYtOQssU/yNzYBPP3W5f3V42Xl5MlNS0XEQO/bdDLIRVkXOsrza8IyV/NUClgMnGiEToeiC54pd5PB8AW8R4/tZst9fuox16Iyy3dH7wyO4cFG/QwuUOdnjORB9IyqdgpH2/Kr1WXKTAJ7cLo4mntnAqsPpHDvyXtGJbGHc5GQR92gpWv9oP/wnOY2oUgZLrAWQKzoFqMoorHTySaSQH1pGr86Xr27eKGuL0GwuxydMRXVQhd9uCKsDt0vIL0cM0zfJfz4khcxseI0MCpoBboZNWkfUH2pITqH15SPgaoqRcFP+DQVN8gMfUYSJMjEY0WRFVn32+90yEB0r1auzkzdE/ON07fPW0MyS4SppdXc=
+  on:
+    tags: true
+    repo: msgflo/msgflo-python
+    branch: master
