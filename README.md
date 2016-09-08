@@ -15,15 +15,21 @@ and [Eclipse Paho](https://eclipse.org/paho/clients/python/) for MQTT.
 * Basic support for setting up and running Participants
 * Support for AMQP/RabbitMQ and MQTT brokers
 
+## License
+
+MIT, see [./LICENSE](./LICENSE)
+
+## Installing
+
+Get it from [PyPi](http://pypi.python.org/)
+
+    pip install msgflo --user
+
 ## Usage
 
 See [./examples/repeat.py](./examples/repeat.py)
 
-Run in git
-
-    pip install -r requirements.pip -t .
-    python ./examples/repeat.py
-
-## License
-
-MIT, see [./LICENSE](./LICENSE)
+    wget https://github.com/msgflo/msgflo-python/raw/master/examples/repeat.py
+    # Set address of broker to connect to. Can also be amqp://...
+    export MSGFLO_BROKER=mqtt://localhost
+    python ./repeat.py
