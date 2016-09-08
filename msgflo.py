@@ -1,16 +1,24 @@
 #!/usr/bin/env python
 
-import sys, os, json, random
+import sys, os, json, random, urlparse
 sys.path.append(os.path.abspath("."))
 
 import logging
 logger = logging.getLogger('msgflo')
+log_level = os.environ.get('MSGFLO_PYTHON_LOGLEVEL')
+if log_level:
+  level = getattr(logging, log_level.upper())
+  logging.basicConfig(level=level)
 
 import gevent
 import gevent.event
 
+# AMQP
 from haigha.connection import Connection as haigha_Connection
 from haigha.message import Message as haigha_Message
+
+# MQTT
+import paho.mqtt.client as mqtt
 
 def addDefaultQueue(p, role):
   defaultQueue = '%s.%s' % (role, p['id'].upper())
@@ -58,6 +66,7 @@ class Participant:
 class Engine(object):
     def __init__(self, broker):
         self.broker_url = broker
+        self.broker_info = urlparse.urlparse(self.broker_url)
 
     def done_callback(self, done_cb):
         self._done_cb = done_cb
@@ -72,6 +81,10 @@ class Engine(object):
 
     def run(self):
         raise NotImplementedError
+
+class Message(object):
+  def __init__(self, data):
+    self.data = data
 
 class AmqpEngine(Engine):
 
@@ -112,8 +125,7 @@ class AmqpEngine(Engine):
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
-    logger.debug("Publishing message: %s, %s, %s" % (data,outport,ports))
-    sys.stdout.flush()
+    logger.debug("Publishing to message: %s, %s, %s" % (data,outport,ports))
     serialized = json.dumps(data)
     msg = haigha_Message(serialized)
     port = [p for p in ports if outport == p['id']][0]
@@ -161,7 +173,6 @@ class AmqpEngine(Engine):
 
     def handle_input(msg):
       logger.debug("Received message: %s" % (msg,))
-      sys.stdout.flush()
 
       msg.data = json.loads(msg.body.decode("utf-8"))
       part.process(port, msg)
@@ -174,27 +185,90 @@ class AmqpEngine(Engine):
     else:
       channel.exchange.declare(queue, 'fanout')
       logger.debug('created outqueue')
-      sys.stdout.flush()
-
 
 class MqttEngine(Engine):
   def __init__(self, broker):
       Engine.__init__(self, broker)
 
+      self._client = mqtt.Client()
+      self._client.on_connect = self._on_connect
+      self._client.on_message = self._on_message
+      self._client.on_subscribe = self._on_subscribe
+      host = self.broker_info.hostname
+      port = self.broker_info.port
+      if port is None:
+        port = 1883
+      self._client.connect(host, port, 60)
+
   def add_participant(self, participant):
     self.participant = participant
     self.participant._engine = self
 
-    # FIXME: send discovery message
-
   def run(self):
-    pass # FIXME: actually connect to broker
+    self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
+
+  def _send(self, outport, data):
+    ports = self.participant.definition['outports']
+    serialized = json.dumps(data)
+    port = [p for p in ports if outport == p['id']][0]
+    queue = port['queue']
+    logger.debug("Publishing message on %s" % (queue))
+    self._client.publish(queue, serialized)
 
   # TODO: implement ACK/NACK for MQTT
   def ack_message(self, msg):
     pass
   def nack_message(self, msg):
     pass
+
+  def _message_pump_greenthread(self):
+    try:
+      while self._client is not None:
+        # Pump
+        self._client.loop(timeout=0.1)
+        # Yield to other greenlets so they don't starve
+        gevent.sleep()
+    finally:
+      if self._done_cb:
+        self._done_cb()
+    return 
+
+  def _on_connect(self, client, userdata, flags, rc):
+      print("Connected with result code" + str(rc))
+      self._send_discovery(self.participant.definition)
+
+
+      # Subscribe to queues for inports
+      subscriptions = [] # ("topic", QoS)
+      for port in self.participant.definition['inports']:
+        topic = port['queue']
+        logging.debug('subscribing to %s' % topic)
+        subscriptions.append((topic, 0))
+      self._client.subscribe(subscriptions)
+
+  def _on_subscribe(self, client, userdata, mid, granted_qos):
+      logging.debug('subscribed %s' % str(mid))
+
+  def _on_message(self, client, userdata, mqtt_msg):
+      logging.debug('got message on %s' % mqtt_msg.topic)
+      port = "" # FIXME: map from topic back to port
+      def notify():
+          data = json.loads(str(mqtt_msg.payload))
+          msg = Message(data)
+          self.participant.process(port, msg)
+
+      gevent.spawn(notify)
+
+  def _send_discovery(self, definition):
+    m = {
+      'protocol': 'discovery',
+      'command': 'participant',
+      'payload': definition,
+    }
+    msg = json.dumps(m)
+    self._client.publish('fbp', msg)
+    logger.debug('sent discovery message %s' % msg)
+    return
 
 def run(participant, broker=None, done_cb=None):
     if broker is None:

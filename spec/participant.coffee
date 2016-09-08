@@ -9,7 +9,7 @@ participants =
 
 # Note: most require running an external broker service
 transports =
-  #'MQTT': 'mqtt://localhost'
+  'MQTT': 'mqtt://localhost'
   'AMQP': 'amqp://localhost'
 
 transportTests = (g, address) ->
@@ -22,7 +22,7 @@ transportTests = (g, address) ->
 
   names = Object.keys g.commands
   names.forEach (name) ->
-    heterogenous.testParticipant g, name
+    heterogenous.testParticipant g, name, { broker: address }
 
 describe 'Participants', ->
   g =
