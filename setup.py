@@ -20,7 +20,6 @@ setup(
     author_email='jononor@gmail.com',
     classifiers=[
         'Environment :: Web Environment',
-        'Framework :: Msgflo',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
