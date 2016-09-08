@@ -30,4 +30,9 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Topic :: Internet :: WWW/HTTP',
     ],
+    install_requires=[
+        "gevent >= 1.0.2",
+        "haigha >= 0.8.0",
+        "paho-mqtt >= 1.1",
+    ],
 )
