@@ -5,6 +5,10 @@ sys.path.append(os.path.abspath("."))
 
 import logging
 logger = logging.getLogger('msgflo')
+log_level = os.environ.get('MSGFLO_PYTHON_LOGLEVEL')
+if log_level:
+  level = getattr(logging, log_level.upper())
+  logging.basicConfig(level=level)
 
 import gevent
 import gevent.event
