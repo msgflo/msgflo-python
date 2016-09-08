@@ -19,7 +19,6 @@ from haigha.message import Message as haigha_Message
 
 # MQTT
 import paho.mqtt.client as mqtt
-import threading
 
 def addDefaultQueue(p, role):
   defaultQueue = '%s.%s' % (role, p['id'].upper())
@@ -183,55 +182,48 @@ class AmqpEngine(Engine):
       channel.exchange.declare(queue, 'fanout')
       logger.debug('created outqueue')
 
-class MqttConnector(threading.Thread):
-    def __init__(self, host, port, on_connect, on_message):
-        threading.Thread.__init__(self)
-        self.client = mqtt.Client()
-        self.client.on_connect = on_connect
-        self.client.on_message = on_message
-        if port is None:
-          port = 1883
-        self.client.connect(host, port, 60)
-        self.running = True
-
-    def run(self):
-        try:
-            while self.running:
-                self.client.loop_forever()
-        except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
-            self.running = False
-        except StopIteration:
-            self.client = None
-
-    def publish(self, topic, msg):
-      self.client.publish(topic, msg)
-
 class MqttEngine(Engine):
   def __init__(self, broker):
       Engine.__init__(self, broker)
+
+      self._client = mqtt.Client()
+      self._client.on_connect = self._on_connect
+      self._client.on_message = self._on_message
       host = self.broker_info.hostname
       port = self.broker_info.port
-      self.connector = MqttConnector(host, port, self._on_connect, self._on_message) 
+      if port is None:
+        port = 1883
+      self._client.connect(host, port, 60)
 
   def add_participant(self, participant):
     self.participant = participant
     self.participant._engine = self
 
   def run(self):
-    print 'run'
-    self.connector.run()
-    print 'running'
+    self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
 
   def _send(self, outport, msg):
       # FIXME: lookup queue in port info
       queue = 'fofo.OUT'
-      self.connector.publish(queue, msg)
+      self._client.publish(queue, msg)
 
   # TODO: implement ACK/NACK for MQTT
   def ack_message(self, msg):
     pass
   def nack_message(self, msg):
     pass
+
+  def _message_pump_greenthread(self):
+    try:
+      while self._client is not None:
+        # Pump
+        self._client.loop(timeout=0.1)
+        # Yield to other greenlets so they don't starve
+        gevent.sleep()
+    finally:
+      if self._done_cb:
+        self._done_cb()
+    return 
 
   def _on_connect(self, client, userdata, flags, rc):
       print("Connected with result code" + str(rc))
@@ -256,8 +248,8 @@ class MqttEngine(Engine):
       'payload': definition,
     }
     msg = json.dumps(m)
-    self.connector.publish('fbp', msg)
-    logger.debug('sent discovery message', msg)
+    self._client.publish('fbp', msg)
+    logger.debug('sent discovery message %s' % msg)
     return
 
 def run(participant, broker=None, done_cb=None):
