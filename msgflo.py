@@ -82,6 +82,10 @@ class Engine(object):
     def run(self):
         raise NotImplementedError
 
+class Message(object):
+  def __init__(self, data):
+    self.data = data
+
 class AmqpEngine(Engine):
 
   def __init__(self, broker):
@@ -121,7 +125,7 @@ class AmqpEngine(Engine):
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
-    logger.debug("Publishing message: %s, %s, %s" % (data,outport,ports))
+    logger.debug("Publishing to message: %s, %s, %s" % (data,outport,ports))
     serialized = json.dumps(data)
     msg = haigha_Message(serialized)
     port = [p for p in ports if outport == p['id']][0]
@@ -189,6 +193,7 @@ class MqttEngine(Engine):
       self._client = mqtt.Client()
       self._client.on_connect = self._on_connect
       self._client.on_message = self._on_message
+      self._client.on_subscribe = self._on_subscribe
       host = self.broker_info.hostname
       port = self.broker_info.port
       if port is None:
@@ -202,10 +207,13 @@ class MqttEngine(Engine):
   def run(self):
     self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
 
-  def _send(self, outport, msg):
-      # FIXME: lookup queue in port info
-      queue = 'fofo.OUT'
-      self._client.publish(queue, msg)
+  def _send(self, outport, data):
+    ports = self.participant.definition['outports']
+    serialized = json.dumps(data)
+    port = [p for p in ports if outport == p['id']][0]
+    queue = port['queue']
+    logger.debug("Publishing message on %s" % (queue))
+    self._client.publish(queue, serialized)
 
   # TODO: implement ACK/NACK for MQTT
   def ack_message(self, msg):
@@ -229,15 +237,25 @@ class MqttEngine(Engine):
       print("Connected with result code" + str(rc))
       self._send_discovery(self.participant.definition)
 
-  def _on_message(self, client, userdata, msg):
-      print(msg.topic+" "+str(msg.payload))
+
+      # Subscribe to queues for inports
+      subscriptions = [] # ("topic", QoS)
+      for port in self.participant.definition['inports']:
+        topic = port['queue']
+        logging.debug('subscribing to %s' % topic)
+        subscriptions.append((topic, 0))
+      self._client.subscribe(subscriptions)
+
+  def _on_subscribe(self, client, userdata, mid, granted_qos):
+      logging.debug('subscribed %s' % str(mid))
+
+  def _on_message(self, client, userdata, mqtt_msg):
+      logging.debug('got message on %s' % mqtt_msg.topic)
+      port = "" # FIXME: map from topic back to port
       def notify():
-          js = json.JSONDecoder()
-          print(msg.payload)
-          pl = js.decode(str(msg.payload))
-          pl["published_at"] = time.time() * 1000
-          for sub in subscriptions[:]:
-              sub.put(json.dumps(pl))
+          data = json.loads(str(mqtt_msg.payload))
+          msg = Message(data)
+          self.participant.process(port, msg)
 
       gevent.spawn(notify)
 
