@@ -119,7 +119,6 @@ class AmqpEngine(Engine):
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
     logger.debug("Publishing message: %s, %s, %s" % (data,outport,ports))
-    sys.stdout.flush()
     serialized = json.dumps(data)
     msg = haigha_Message(serialized)
     port = [p for p in ports if outport == p['id']][0]
@@ -167,7 +166,6 @@ class AmqpEngine(Engine):
 
     def handle_input(msg):
       logger.debug("Received message: %s" % (msg,))
-      sys.stdout.flush()
 
       msg.data = json.loads(msg.body.decode("utf-8"))
       part.process(port, msg)
