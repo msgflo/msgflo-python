@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+import sys, os, importlib
+sys.path.append(os.path.abspath(".."))
+import msgflo, gevent
+import logging
+
+def find_participant_classes(mod):
+    cls = []
+    for name in dir(mod):
+        symbol = getattr(mod, name)
+        if hasattr(symbol, 'send') and hasattr(symbol, 'process'): # XXX: HACK
+            cls.append(symbol)
+    return cls
+
+def load_module_file(filepath):
+    modulename = os.path.basename(filepath)
+    modulename = modulename.replace('.py', '')
+    dirpath = os.path.dirname(filepath)
+    print dirpath, modulename
+    sys.path.append(dirpath) # XXX: HACK
+    module = importlib.import_module(modulename)
+    return module
+
+def main():
+    prog, args = sys.argv[0], sys.argv[1:]
+    try:
+        modulepath, role = args
+    except ValueError, e:
+        sys.stderr.write("Usage: msgflo-python MODULE.py ROLE\n")
+        return 1
+
+    module = load_module_file(modulepath)
+    classes = find_participant_classes(module)
+    Participant = classes[0]
+
+    participant = Participant(role)
+    d = participant.definition
+    waiter = gevent.event.AsyncResult()
+    engine = msgflo.run(participant, done_cb=waiter.set)
+    print "%s(%s) running on %s" % (d['role'], d['component'], engine.broker_url)
+    sys.stdout.flush()
+    waiter.wait()    
+
+if __name__ == '__main__':
+    logging.basicConfig()
+    main()
