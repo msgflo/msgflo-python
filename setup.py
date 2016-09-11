@@ -35,4 +35,7 @@ setup(
         "haigha >= 0.8.0",
         "paho-mqtt >= 1.1",
     ],
+    scripts=[
+        'bin/msgflo-python'
+    ],
 )
