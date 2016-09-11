@@ -288,3 +288,12 @@ def run(participant, broker=None, done_cb=None):
     engine.run()
 
     return engine
+
+def main(Participant):
+    participant = Participant(role)
+    d = participant.definition
+    waiter = gevent.event.AsyncResult()
+    engine = msgflo.run(participant, done_cb=waiter.set)
+    print "%s(%s) running on %s" % (d['role'], d['component'], engine.broker_url)
+    sys.stdout.flush()
+    waiter.wait()
