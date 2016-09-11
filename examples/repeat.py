@@ -11,6 +11,12 @@ class Repeat(msgflo.Participant):
     d = {
       'component': 'PythonRepeat',
       'label': 'Repeat input data without change',
+      'inports': [
+        { 'id': 'in', 'type': 'any' },
+      ],
+      'outports': [
+        { 'id': 'out', 'type': 'any' },
+      ],
     }
     msgflo.Participant.__init__(self, d, role)
 
