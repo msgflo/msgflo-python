@@ -291,12 +291,13 @@ def run(participant, broker=None, done_cb=None):
         broker = os.environ.get('MSGFLO_BROKER', 'amqp://localhost')
 
     engine = None
-    if broker.startswith('amqp://'):
+    broker_info = urlparse.urlparse(broker)
+    if broker_info.scheme == 'amqp':
         engine = AmqpEngine(broker)
-    elif broker.startswith('mqtt://'):
+    elif broker_info.scheme == 'mqtt':
         engine = MqttEngine(broker)
     else:
-        raise ValueError("msgflo: No engine implementation found for broker URL %s" % (broker,))
+        raise ValueError("msgflo: No engine implementation found for broker URL scheme %s" % (broker_info.scheme,))
 
     if done_cb:
         engine.done_callback(done_cb)
@@ -310,6 +311,7 @@ def main(Participant, role):
     d = participant.definition
     waiter = gevent.event.AsyncResult()
     engine = run(participant, done_cb=waiter.set)
-    print "%s(%s) running on %s" % (d['role'], d['component'], engine.broker_url)
+    anon_url = "%s://%s" % (engine.broker_info.scheme, engine.broker_info.hostname)
+    print "%s(%s) running on %s" % (d['role'], d['component'], anon_url)
     sys.stdout.flush()
     waiter.wait()
