@@ -200,6 +200,10 @@ class MqttEngine(Engine):
       Engine.__init__(self, broker)
 
       self._client = mqtt.Client()
+
+      if self.broker_info.username:
+        self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
+
       self._client.on_connect = self._on_connect
       self._client.on_message = self._on_message
       self._client.on_subscribe = self._on_subscribe
