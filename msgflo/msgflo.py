@@ -4,11 +4,12 @@ import sys, os, json, random, urlparse
 sys.path.append(os.path.abspath("."))
 
 import logging
-logger = logging.getLogger('msgflo')
+logging.basicConfig()
 log_level = os.environ.get('MSGFLO_PYTHON_LOGLEVEL')
+logger = logging.getLogger('msgflo')
 if log_level:
   level = getattr(logging, log_level.upper())
-  logging.basicConfig(level=level)
+  logger.setLevel(level)
 
 import gevent
 import gevent.event
