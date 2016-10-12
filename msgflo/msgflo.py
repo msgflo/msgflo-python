@@ -168,7 +168,7 @@ class AmqpEngine(Engine):
     }
     msg = haigha_Message(json.dumps(m))
     channel.basic.publish(msg, '', 'fbp')
-    logger.debug('sent discovery message', msg)
+    logger.debug('sent discovery message')
     return
 
   def _setup_queue(self, part, channel, direction, port):
@@ -191,10 +191,10 @@ class AmqpEngine(Engine):
     if 'in' in direction:
       channel.queue.declare(queue)
       channel.basic.consume(queue=queue, consumer=handle_input, no_ack=False)
-      logger.debug('subscribed to', queue)
+      logger.debug('subscribed to %s' % queue)
     else:
       channel.exchange.declare(queue, 'fanout')
-      logger.debug('created outqueue')
+      logger.debug('created outqueue %s' % queue)
 
 class MqttEngine(Engine):
   def __init__(self, broker):
