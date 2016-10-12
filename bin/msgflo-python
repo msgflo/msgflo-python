@@ -33,14 +33,7 @@ def main():
     module = load_module_file(modulepath)
     classes = find_participant_classes(module)
     Participant = classes[0]
-
-    participant = Participant(role)
-    d = participant.definition
-    waiter = gevent.event.AsyncResult()
-    engine = msgflo.run(participant, done_cb=waiter.set)
-    print "%s(%s) running on %s" % (d['role'], d['component'], engine.broker_url)
-    sys.stdout.flush()
-    waiter.wait()    
+    msgflo.main(Participant, role)
 
 if __name__ == '__main__':
     logging.basicConfig()

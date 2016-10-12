@@ -4,11 +4,12 @@ import sys, os, json, random, urlparse
 sys.path.append(os.path.abspath("."))
 
 import logging
-logger = logging.getLogger('msgflo')
+logging.basicConfig()
 log_level = os.environ.get('MSGFLO_PYTHON_LOGLEVEL')
+logger = logging.getLogger('msgflo')
 if log_level:
   level = getattr(logging, log_level.upper())
-  logging.basicConfig(level=level)
+  logger.setLevel(level)
 
 import gevent
 import gevent.event
@@ -83,8 +84,10 @@ class Engine(object):
         raise NotImplementedError
 
 class Message(object):
-  def __init__(self, data):
-    self.data = data
+  def __init__(self, raw):
+    self.buffer = raw
+    self.data = raw
+    self.json = None
 
 class AmqpEngine(Engine):
 
@@ -165,7 +168,7 @@ class AmqpEngine(Engine):
     }
     msg = haigha_Message(json.dumps(m))
     channel.basic.publish(msg, '', 'fbp')
-    logger.debug('sent discovery message', msg)
+    logger.debug('sent discovery message')
     return
 
   def _setup_queue(self, part, channel, direction, port):
@@ -174,23 +177,34 @@ class AmqpEngine(Engine):
     def handle_input(msg):
       logger.debug("Received message: %s" % (msg,))
 
-      msg.data = json.loads(msg.body.decode("utf-8"))
+      msg.buffer = msg.body
+      try:
+        msg.json = json.loads(msg.body.decode("utf-8"))
+        msg.data = msg.json # compat
+      except ValueError as e:
+        # Not JSON, assume binary
+        msg.data = msg.buffer
+
       part.process(port, msg)
       return
 
     if 'in' in direction:
       channel.queue.declare(queue)
       channel.basic.consume(queue=queue, consumer=handle_input, no_ack=False)
-      logger.debug('subscribed to', queue)
+      logger.debug('subscribed to %s' % queue)
     else:
       channel.exchange.declare(queue, 'fanout')
-      logger.debug('created outqueue')
+      logger.debug('created outqueue %s' % queue)
 
 class MqttEngine(Engine):
   def __init__(self, broker):
       Engine.__init__(self, broker)
 
       self._client = mqtt.Client()
+
+      if self.broker_info.username:
+        self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
+
       self._client.on_connect = self._on_connect
       self._client.on_message = self._on_message
       self._client.on_subscribe = self._on_subscribe
@@ -252,9 +266,16 @@ class MqttEngine(Engine):
   def _on_message(self, client, userdata, mqtt_msg):
       logging.debug('got message on %s' % mqtt_msg.topic)
       port = "" # FIXME: map from topic back to port
+
       def notify():
-          data = json.loads(str(mqtt_msg.payload))
-          msg = Message(data)
+          msg = Message(mqtt_msg.payload)
+          try:
+            msg.json = json.loads(str(mqtt_msg.payload))
+            msg.data = msg.json # compat
+          except ValueError as e:
+            # Not JSON, assume binary
+            msg.data = msg.buffer
+
           self.participant.process(port, msg)
 
       gevent.spawn(notify)
@@ -275,12 +296,13 @@ def run(participant, broker=None, done_cb=None):
         broker = os.environ.get('MSGFLO_BROKER', 'amqp://localhost')
 
     engine = None
-    if broker.startswith('amqp://'):
+    broker_info = urlparse.urlparse(broker)
+    if broker_info.scheme == 'amqp':
         engine = AmqpEngine(broker)
-    elif broker.startswith('mqtt://'):
+    elif broker_info.scheme == 'mqtt':
         engine = MqttEngine(broker)
     else:
-        raise ValueError("msgflo: No engine implementation found for broker URL %s" % (broker,))
+        raise ValueError("msgflo: No engine implementation found for broker URL scheme %s" % (broker_info.scheme,))
 
     if done_cb:
         engine.done_callback(done_cb)
@@ -288,3 +310,19 @@ def run(participant, broker=None, done_cb=None):
     engine.run()
 
     return engine
+
+def main(Participant, role=None):
+    if not role:
+        try:
+            role = sys.argv[0]
+        except IndexError, e:
+            role = participant.definition.component.tolower()
+
+    participant = Participant(role)
+    d = participant.definition
+    waiter = gevent.event.AsyncResult()
+    engine = run(participant, done_cb=waiter.set)
+    anon_url = "%s://%s" % (engine.broker_info.scheme, engine.broker_info.hostname)
+    print "%s(%s) running on %s" % (d['role'], d['component'], anon_url)
+    sys.stdout.flush()
+    waiter.wait()
