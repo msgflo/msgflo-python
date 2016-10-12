@@ -310,7 +310,13 @@ def run(participant, broker=None, done_cb=None):
 
     return engine
 
-def main(Participant, role):
+def main(Participant, role=None):
+    if not role:
+        try:
+            role = sys.argv[0]
+        except IndexError, e:
+            role = participant.definition.component.tolower()
+
     participant = Participant(role)
     d = participant.definition
     waiter = gevent.event.AsyncResult()
