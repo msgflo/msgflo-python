@@ -33,7 +33,7 @@ def main():
     module = load_module_file(modulepath)
     classes = find_participant_classes(module)
     Participant = classes[0]
-    msgflo.main(Participant)
+    msgflo.main(Participant, role)
 
 if __name__ == '__main__':
     logging.basicConfig()
