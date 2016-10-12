@@ -83,8 +83,10 @@ class Engine(object):
         raise NotImplementedError
 
 class Message(object):
-  def __init__(self, data):
-    self.data = data
+  def __init__(self, raw):
+    self.buffer = raw
+    self.data = raw
+    self.json = None
 
 class AmqpEngine(Engine):
 
@@ -174,7 +176,14 @@ class AmqpEngine(Engine):
     def handle_input(msg):
       logger.debug("Received message: %s" % (msg,))
 
-      msg.data = json.loads(msg.body.decode("utf-8"))
+      msg.buffer = msg.body
+      try:
+        msg.json = json.loads(msg.body.decode("utf-8"))
+        msg.data = msg.json # compat
+      except ValueError as e:
+        # Not JSON, assume binary
+        msg.data = msg.buffer
+
       part.process(port, msg)
       return
 
@@ -252,9 +261,16 @@ class MqttEngine(Engine):
   def _on_message(self, client, userdata, mqtt_msg):
       logging.debug('got message on %s' % mqtt_msg.topic)
       port = "" # FIXME: map from topic back to port
+
       def notify():
-          data = json.loads(str(mqtt_msg.payload))
-          msg = Message(data)
+          msg = Message(mqtt_msg.payload)
+          try:
+            msg.json = json.loads(str(mqtt_msg.payload))
+            msg.data = msg.json # compat
+          except ValueError as e:
+            # Not JSON, assume binary
+            msg.data = msg.buffer
+
           self.participant.process(port, msg)
 
       gevent.spawn(notify)
