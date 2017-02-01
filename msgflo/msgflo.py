@@ -63,11 +63,14 @@ class Participant:
     self._engine.nack_message(msg)
 
 
+DEFAULT_DISCOVERY_PERIOD=60
+
 # Interface for engine/transport implementations
 class Engine(object):
-    def __init__(self, broker):
+    def __init__(self, broker, discovery_period=None):
         self.broker_url = broker
         self.broker_info = urlparse.urlparse(self.broker_url)
+        self.discovery_period = discovery_period if discovery_period else DEFAULT_DISCOVERY_PERIOD
 
     def done_callback(self, done_cb):
         self._done_cb = done_cb
@@ -91,8 +94,8 @@ class Message(object):
 
 class AmqpEngine(Engine):
 
-  def __init__(self, broker):
-    Engine.__init__(self, broker)
+  def __init__(self, broker, discovery_period=None):
+    Engine.__init__(self, broker, discovery_period=discovery_period)
 
     # Connect to AMQP broker with default connection and authentication
     # FIXME: respect self.broker_url
@@ -108,13 +111,18 @@ class AmqpEngine(Engine):
     self.participant = participant
     self.participant._engine = self
 
-    self._send_discovery(self._channel, self.participant.definition)
-
     # Create and configure message exchange and queue
     for p in self.participant.definition['inports']:
       self._setup_queue(self.participant, self._channel, 'in', p)
     for p in self.participant.definition['outports']:
       self._setup_queue(self.participant, self._channel, 'out', p)
+
+    def send_discovery():
+      while self.participant:
+        self._send_discovery(self._channel, self.participant.definition)
+        delay = self.discovery_period/2.2
+        gevent.sleep(delay) # yields
+    gevent.Greenlet.spawn(send_discovery)
 
   def run(self):
     # Start message pump
@@ -249,9 +257,7 @@ class MqttEngine(Engine):
 
   def _on_connect(self, client, userdata, flags, rc):
       print("Connected with result code" + str(rc))
-      self._send_discovery(self.participant.definition)
-
-
+  
       # Subscribe to queues for inports
       subscriptions = [] # ("topic", QoS)
       for port in self.participant.definition['inports']:
@@ -259,6 +265,13 @@ class MqttEngine(Engine):
         logging.debug('subscribing to %s' % topic)
         subscriptions.append((topic, 0))
       self._client.subscribe(subscriptions)
+
+      def send_discovery():
+        while self.participant:
+          delay = self.discovery_period/2.2
+          self._send_discovery(self.participant.definition)
+          gevent.sleep(delay) # yields
+      gevent.Greenlet.spawn(send_discovery)
 
   def _on_subscribe(self, client, userdata, mid, granted_qos):
       logging.debug('subscribed %s' % str(mid))
@@ -314,7 +327,7 @@ def run(participant, broker=None, done_cb=None):
 def main(Participant, role=None):
     if not role:
         try:
-            role = sys.argv[0]
+            role = sys.argv[1]
         except IndexError, e:
             role = participant.definition.component.tolower()
 
