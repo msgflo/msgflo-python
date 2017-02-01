@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import sys, os, json, logging
 sys.path.append(os.path.abspath("."))
