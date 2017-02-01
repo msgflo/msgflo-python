@@ -4,8 +4,9 @@ chai = require 'chai' unless chai
 heterogenous = require '../node_modules/msgflo/spec/heterogenous.coffee'
 
 python = process.env.PYTHON or 'python'
+repeatPy = path.join __dirname, '..', 'examples', 'repeat.py'
 participants =
-  'PythonRepeat': [python, path.join __dirname, '..', 'examples', 'repeat.py']
+  'PythonRepeat': [python, repeatPy, 'repeater']
 
 # Note: most require running an external broker service
 transports =

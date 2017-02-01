@@ -314,7 +314,7 @@ def run(participant, broker=None, done_cb=None):
 def main(Participant, role=None):
     if not role:
         try:
-            role = sys.argv[0]
+            role = sys.argv[1]
         except IndexError, e:
             role = participant.definition.component.tolower()
 
