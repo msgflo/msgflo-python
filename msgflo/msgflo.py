@@ -137,8 +137,11 @@ class AmqpEngine(Engine):
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
     logger.debug("Publishing to message: %s, %s, %s" % (data,outport,ports))
-    serialized = json.dumps(data)
-    msg = haigha_Message(serialized)
+    if isinstance(data, bytearray):
+      pass
+    else:
+      data = json.dumps(data)
+    msg = haigha_Message(data)
     port = [p for p in ports if outport == p['id']][0]
     self._channel.basic.publish(msg, port['queue'], '')
     return
@@ -231,11 +234,14 @@ class MqttEngine(Engine):
 
   def _send(self, outport, data):
     ports = self.participant.definition['outports']
-    serialized = json.dumps(data)
+    if isinstance(data, bytearray):
+      pass
+    else
+      data = json.dumps(data)
     port = [p for p in ports if outport == p['id']][0]
     queue = port['queue']
     logger.debug("Publishing message on %s" % (queue))
-    self._client.publish(queue, serialized)
+    self._client.publish(queue, data)
 
   # TODO: implement ACK/NACK for MQTT
   def ack_message(self, msg):
