@@ -25,7 +25,7 @@ def load_module_file(filepath):
 def main():
     prog, args = sys.argv[0], sys.argv[1:]
     try:
-        modulepath, role = args
+        modulepath, role = args[0:2]
     except ValueError, e:
         sys.stderr.write("Usage: msgflo-python MODULE.py ROLE\n")
         return 1
