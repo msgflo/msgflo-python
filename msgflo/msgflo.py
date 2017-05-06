@@ -149,7 +149,7 @@ class AmqpEngine(Engine):
         # Pump
         self._conn.read_frames()
         # Yield to other greenlets so they don't starve
-        gevent.sleep()
+        gevent.sleep(0.1)
     finally:
       if self._done_cb:
         self._done_cb()
@@ -249,7 +249,7 @@ class MqttEngine(Engine):
         # Pump
         self._client.loop(timeout=0.1)
         # Yield to other greenlets so they don't starve
-        gevent.sleep()
+        gevent.sleep(0.1)
     finally:
       if self._done_cb:
         self._done_cb()
