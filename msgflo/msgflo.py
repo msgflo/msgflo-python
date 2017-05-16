@@ -297,7 +297,10 @@ class MqttEngine(Engine):
 
   def _on_message(self, client, userdata, mqtt_msg):
       logging.debug('got message on %s' % mqtt_msg.topic)
-      port = "" # FIXME: map from topic back to port
+      port = ""
+      for inport in self.participant.definition['inports']:
+          if inport['queue'] == mqtt_msg.topic:
+              port = inport['id']
 
       def notify():
           msg = Message(mqtt_msg.payload)
