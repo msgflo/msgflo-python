@@ -1,8 +1,10 @@
 language: python
 services:
 - rabbitmq
+dist: trusty
+sudo: true
 node_js:
-- '0.10'
+- '6'
 before_install:
 - sudo apt-get install pkg-config cmake openssl libc-ares-dev
 install:
