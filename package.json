@@ -19,7 +19,7 @@
   "dependencies": {},
   "devDependencies": {
     "amqplib": "^0.5.1",
-    "chai": "~3.5.0",
+    "chai": "~4.0.0",
     "coffee-script": "^1.8.0",
     "mocha": "~3.3.0",
     "mqtt": "~1.4.0",
