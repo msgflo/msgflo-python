@@ -271,7 +271,7 @@ class MqttEngine(Engine):
     return 
 
   def _on_connect(self, client, userdata, flags, rc):
-      print("Connected with result code" + str(rc))
+      logging.debug("Connected with result code" + str(rc))
   
       # Subscribe to queues for inports
       subscriptions = [] # ("topic", QoS)
