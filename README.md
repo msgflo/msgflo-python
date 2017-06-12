@@ -10,7 +10,7 @@ and [Eclipse Paho](https://eclipse.org/paho/clients/python/) for MQTT.
 
 ## Status
 
-*Experimental*
+*Minimally useful*
 
 * Basic support for setting up and running Participants
 * Support for AMQP/RabbitMQ and MQTT brokers
