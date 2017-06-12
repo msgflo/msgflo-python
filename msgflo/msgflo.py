@@ -106,10 +106,14 @@ class AmqpEngine(Engine):
   def __init__(self, broker, discovery_period=None):
     Engine.__init__(self, broker, discovery_period=discovery_period)
 
-    # Connect to AMQP broker with default connection and authentication
-    # FIXME: respect self.broker_url
-    self._conn = haigha_Connection(transport='gevent',
-                                   close_cb=self._connection_closed_cb,
+    # Prepare connection to AMQP broker
+    vhost = self.broker_info.path or '/'
+    host = self.broker_info.hostname or 'localhost'
+    port = self.broker_info.port or 5672
+    user = self.broker_info.username or 'guest'
+    password = self.broker_info.password or 'guest'
+    self._conn = haigha_Connection(transport='gevent', close_cb=self._connection_closed_cb,
+                                   host=host, vhost=vhost, port=port, user=user, password=password,
                                    logger=logger)
 
     # Create message channel
