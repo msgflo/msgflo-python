@@ -22,7 +22,7 @@
     "chai": "^4.1.0",
     "coffee-script": "^1.8.0",
     "mocha": "^4.0.1",
-    "mqtt": "~1.4.0",
+    "mqtt": "^2.13.0",
     "msgflo": "^0.10.0"
   },
   "keywords": [],
