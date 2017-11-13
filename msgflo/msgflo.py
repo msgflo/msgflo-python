@@ -27,7 +27,7 @@ try:
   import haigha
   from haigha.connection import Connection as haigha_Connection
   from haigha.message import Message as haigha_Message
-except ImportError as e:
+except (ImportError, SyntaxError) as e:
   haigha = e
 
 # MQTT
