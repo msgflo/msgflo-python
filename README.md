@@ -14,6 +14,9 @@ and [Eclipse Paho](https://eclipse.org/paho/clients/python/) for MQTT.
 
 * Basic support for setting up and running Participants
 * Support for AMQP/RabbitMQ and MQTT brokers
+* Support for Python 3.5+ and Python 2.7+
+
+[Changelog](./CHANGES.md)
 
 ## License
 
