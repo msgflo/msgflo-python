@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
-import sys, os, json, random, urlparse
+import sys, os, json, random
 sys.path.append(os.path.abspath("."))
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse 
 
 from optparse import OptionParser
 
@@ -71,7 +76,7 @@ DEFAULT_DISCOVERY_PERIOD=60
 class Engine(object):
     def __init__(self, broker, discovery_period=None):
         self.broker_url = broker
-        self.broker_info = urlparse.urlparse(self.broker_url)
+        self.broker_info = urlparse(self.broker_url)
         self.discovery_period = discovery_period if discovery_period else DEFAULT_DISCOVERY_PERIOD
 
     def done_callback(self, done_cb):
@@ -338,7 +343,7 @@ def run(participant, broker=None, done_cb=None, iips={}):
         broker = os.environ.get('MSGFLO_BROKER', 'amqp://localhost')
 
     engine = None
-    broker_info = urlparse.urlparse(broker)
+    broker_info = urlparse(broker)
     if broker_info.scheme == 'amqp':
         engine = AmqpEngine(broker)
     elif broker_info.scheme == 'mqtt':
@@ -379,6 +384,6 @@ def main(Participant, role=None):
     waiter = gevent.event.AsyncResult()
     engine = run(participant, done_cb=waiter.set, iips=config.iips)
     anon_url = "%s://%s" % (engine.broker_info.scheme, engine.broker_info.hostname)
-    print "%s(%s) running on %s" % (d['role'], d['component'], anon_url)
+    print("%s(%s) running on %s" % (d['role'], d['component'], anon_url))
     sys.stdout.flush()
     waiter.wait()
