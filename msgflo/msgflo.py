@@ -267,6 +267,7 @@ class MqttEngine(Engine):
     self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
 
   def _send(self, outport, data):
+    logger.debug('Participant sent on %s' % outport)
     ports = self.participant.definition['outports']
     serialized = json.dumps(data)
     port = [p for p in ports if outport == p['id']][0]
@@ -334,6 +335,7 @@ class MqttEngine(Engine):
             msg.json = e
             msg.data = msg.buffer
 
+          logger.debug('Delivering message to %s' % port)
           self.participant.process(port, msg)
 
       gevent.spawn(notify)
