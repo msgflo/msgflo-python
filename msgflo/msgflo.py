@@ -327,10 +327,11 @@ class MqttEngine(Engine):
       def notify():
           msg = Message(mqtt_msg.payload)
           try:
-            msg.json = json.loads(str(mqtt_msg.payload))
+            msg.json = json.loads(mqtt_msg.payload)
             msg.data = msg.json # compat
           except ValueError as e:
             # Not JSON, assume binary
+            msg.json = e
             msg.data = msg.buffer
 
           self.participant.process(port, msg)
