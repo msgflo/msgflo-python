@@ -22,8 +22,13 @@ import gevent
 import gevent.event
 
 # AMQP
-from haigha.connection import Connection as haigha_Connection
-from haigha.message import Message as haigha_Message
+haigha = None
+try:
+  import haigha
+  from haigha.connection import Connection as haigha_Connection
+  from haigha.message import Message as haigha_Message
+except ImportError as e:
+  haigha = e
 
 # MQTT
 import paho.mqtt.client as mqtt
@@ -110,6 +115,9 @@ class AmqpEngine(Engine):
 
   def __init__(self, broker, discovery_period=None):
     Engine.__init__(self, broker, discovery_period=discovery_period)
+
+    if isinstance(haigha, Exception):
+        raise haigha
 
     # Prepare connection to AMQP broker
     vhost = '/'
