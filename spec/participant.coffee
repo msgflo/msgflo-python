@@ -11,7 +11,7 @@ participants =
 # Note: most require running an external broker service
 transports =
   'MQTT': 'mqtt://localhost'
-  'AMQP': 'amqp://localhost'
+  #'AMQP': 'amqp://localhost' # not working on Py3, should be ported to pika
 
 transportTests = (g, address) ->
 
