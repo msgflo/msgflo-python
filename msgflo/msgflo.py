@@ -293,13 +293,13 @@ class MqttEngine(Engine):
     return 
 
   def _on_connect(self, client, userdata, flags, rc):
-      logging.debug("Connected with result code" + str(rc))
+      logger.debug("Connected with result code" + str(rc))
   
       # Subscribe to queues for inports
       subscriptions = [] # ("topic", QoS)
       for port in self.participant.definition['inports']:
         topic = port['queue']
-        logging.debug('subscribing to %s' % topic)
+        logger.debug('subscribing to %s' % topic)
         subscriptions.append((topic, 0))
       self._client.subscribe(subscriptions)
 
@@ -315,10 +315,10 @@ class MqttEngine(Engine):
       gevent.Greenlet.spawn(send_discovery)
 
   def _on_subscribe(self, client, userdata, mid, granted_qos):
-      logging.debug('subscribed %s' % str(mid))
+      logger.debug('subscribed %s' % str(mid))
 
   def _on_message(self, client, userdata, mqtt_msg):
-      logging.debug('got message on %s' % mqtt_msg.topic)
+      logger.debug('got message on %s' % mqtt_msg.topic)
       port = ""
       for inport in self.participant.definition['inports']:
           if inport['queue'] == mqtt_msg.topic:
