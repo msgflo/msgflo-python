@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
-import sys, os, json, random, urlparse
+import sys, os, json, random
 sys.path.append(os.path.abspath("."))
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse 
 
 from optparse import OptionParser
 
@@ -17,8 +22,13 @@ import gevent
 import gevent.event
 
 # AMQP
-from haigha.connection import Connection as haigha_Connection
-from haigha.message import Message as haigha_Message
+haigha = None
+try:
+  import haigha
+  from haigha.connection import Connection as haigha_Connection
+  from haigha.message import Message as haigha_Message
+except (ImportError, SyntaxError) as e:
+  haigha = e
 
 # MQTT
 import paho.mqtt.client as mqtt
@@ -71,7 +81,7 @@ DEFAULT_DISCOVERY_PERIOD=60
 class Engine(object):
     def __init__(self, broker, discovery_period=None):
         self.broker_url = broker
-        self.broker_info = urlparse.urlparse(self.broker_url)
+        self.broker_info = urlparse(self.broker_url)
         self.discovery_period = discovery_period if discovery_period else DEFAULT_DISCOVERY_PERIOD
 
     def done_callback(self, done_cb):
@@ -105,6 +115,9 @@ class AmqpEngine(Engine):
 
   def __init__(self, broker, discovery_period=None):
     Engine.__init__(self, broker, discovery_period=discovery_period)
+
+    if isinstance(haigha, Exception):
+        raise haigha
 
     # Prepare connection to AMQP broker
     vhost = '/'
@@ -234,9 +247,11 @@ class MqttEngine(Engine):
       if self.broker_info.username:
         self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
 
-      self._client.on_connect = self._on_connect
-      self._client.on_message = self._on_message
-      self._client.on_subscribe = self._on_subscribe
+      #self._client.on_connect = _on_connect
+      self._client.on_connect = lambda c, u, f, rc: self._on_connect(c, u, f, rc)
+      self._client.on_message = lambda c, u, m: self._on_message(c, u, m)
+      self._client.on_subscribe = lambda c, u, m, q: self._on_subscribe(c, u, m, q)
+
       host = self.broker_info.hostname
       port = self.broker_info.port
       if port is None:
@@ -252,6 +267,7 @@ class MqttEngine(Engine):
     self._message_pump_greenlet = gevent.spawn(self._message_pump_greenthread)
 
   def _send(self, outport, data):
+    logger.debug('Participant sent on %s' % outport)
     ports = self.participant.definition['outports']
     serialized = json.dumps(data)
     port = [p for p in ports if outport == p['id']][0]
@@ -278,13 +294,13 @@ class MqttEngine(Engine):
     return 
 
   def _on_connect(self, client, userdata, flags, rc):
-      logging.debug("Connected with result code" + str(rc))
+      logger.debug("Connected with result code" + str(rc))
   
       # Subscribe to queues for inports
       subscriptions = [] # ("topic", QoS)
       for port in self.participant.definition['inports']:
         topic = port['queue']
-        logging.debug('subscribing to %s' % topic)
+        logger.debug('subscribing to %s' % topic)
         subscriptions.append((topic, 0))
       self._client.subscribe(subscriptions)
 
@@ -300,25 +316,29 @@ class MqttEngine(Engine):
       gevent.Greenlet.spawn(send_discovery)
 
   def _on_subscribe(self, client, userdata, mid, granted_qos):
-      logging.debug('subscribed %s' % str(mid))
+      logger.debug('subscribed %s' % str(mid))
 
   def _on_message(self, client, userdata, mqtt_msg):
-      logging.debug('got message on %s' % mqtt_msg.topic)
+      logger.debug('got message on %s' % mqtt_msg.topic)
       port = ""
       for inport in self.participant.definition['inports']:
           if inport['queue'] == mqtt_msg.topic:
               port = inport['id']
 
       def notify():
-          msg = Message(mqtt_msg.payload)
-          try:
-            msg.json = json.loads(str(mqtt_msg.payload))
-            msg.data = msg.json # compat
-          except ValueError as e:
-            # Not JSON, assume binary
-            msg.data = msg.buffer
+        msg = Message(mqtt_msg.payload)
+        try:
+          msg.json = json.loads(mqtt_msg.payload.decode('utf8'))
+          msg.data = msg.json # compat
+        except ValueError as e:
+          # Not JSON, assume binary
+          msg.json = e
+          msg.data = msg.buffer
+        except Exception as e:
+          logger.debug('unknown error %s' % str(e))
 
-          self.participant.process(port, msg)
+        logger.debug('Delivering message to %s' % port)
+        self.participant.process(port, msg)
 
       gevent.spawn(notify)
 
@@ -338,7 +358,7 @@ def run(participant, broker=None, done_cb=None, iips={}):
         broker = os.environ.get('MSGFLO_BROKER', 'amqp://localhost')
 
     engine = None
-    broker_info = urlparse.urlparse(broker)
+    broker_info = urlparse(broker)
     if broker_info.scheme == 'amqp':
         engine = AmqpEngine(broker)
     elif broker_info.scheme == 'mqtt':
@@ -379,6 +399,6 @@ def main(Participant, role=None):
     waiter = gevent.event.AsyncResult()
     engine = run(participant, done_cb=waiter.set, iips=config.iips)
     anon_url = "%s://%s" % (engine.broker_info.scheme, engine.broker_info.hostname)
-    print "%s(%s) running on %s" % (d['role'], d['component'], anon_url)
+    print("%s(%s) running on %s" % (d['role'], d['component'], anon_url))
     sys.stdout.flush()
     waiter.wait()

@@ -1,2 +1,2 @@
 
-from msgflo import *
+from .msgflo import *
