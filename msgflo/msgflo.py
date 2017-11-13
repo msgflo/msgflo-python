@@ -326,17 +326,19 @@ class MqttEngine(Engine):
               port = inport['id']
 
       def notify():
-          msg = Message(mqtt_msg.payload)
-          try:
-            msg.json = json.loads(mqtt_msg.payload)
-            msg.data = msg.json # compat
-          except ValueError as e:
-            # Not JSON, assume binary
-            msg.json = e
-            msg.data = msg.buffer
+        msg = Message(mqtt_msg.payload)
+        try:
+          msg.json = json.loads(mqtt_msg.payload.decode('utf8'))
+          msg.data = msg.json # compat
+        except ValueError as e:
+          # Not JSON, assume binary
+          msg.json = e
+          msg.data = msg.buffer
+        except Exception as e:
+          logger.debug('unknown error %s' % str(e))
 
-          logger.debug('Delivering message to %s' % port)
-          self.participant.process(port, msg)
+        logger.debug('Delivering message to %s' % port)
+        self.participant.process(port, msg)
 
       gevent.spawn(notify)
 
