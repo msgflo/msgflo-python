@@ -247,9 +247,11 @@ class MqttEngine(Engine):
       if self.broker_info.username:
         self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
 
-      self._client.on_connect = self._on_connect
-      self._client.on_message = self._on_message
-      self._client.on_subscribe = self._on_subscribe
+      #self._client.on_connect = _on_connect
+      self._client.on_connect = lambda c, u, f, rc: self._on_connect(c, u, f, rc)
+      self._client.on_message = lambda c, u, m: self._on_message(c, u, m)
+      self._client.on_subscribe = lambda c, u, m, q: self._on_subscribe(c, u, m, q)
+
       host = self.broker_info.hostname
       port = self.broker_info.port
       if port is None:
