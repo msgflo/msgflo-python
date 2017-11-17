@@ -17,7 +17,6 @@ def load_module_file(filepath):
     modulename = os.path.basename(filepath)
     modulename = modulename.replace('.py', '')
     dirpath = os.path.dirname(filepath)
-    print(dirpath, modulename)
     sys.path.append(dirpath) # XXX: HACK
     module = importlib.import_module(modulename)
     return module
