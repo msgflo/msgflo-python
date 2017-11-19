@@ -243,11 +243,12 @@ class MqttEngine(Engine):
       Engine.__init__(self, broker)
 
       self._client = mqtt.Client()
+      self.connected = False
 
       if self.broker_info.username:
         self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
 
-      #self._client.on_connect = _on_connect
+      self._client.on_disconnect = lambda c, u, rc: self._on_disconnect(c, u, rc)
       self._client.on_connect = lambda c, u, f, rc: self._on_connect(c, u, f, rc)
       self._client.on_message = lambda c, u, m: self._on_message(c, u, m)
       self._client.on_subscribe = lambda c, u, m, q: self._on_subscribe(c, u, m, q)
@@ -295,7 +296,8 @@ class MqttEngine(Engine):
 
   def _on_connect(self, client, userdata, flags, rc):
       logger.debug("Connected with result code" + str(rc))
-  
+      self.connected = True
+
       # Subscribe to queues for inports
       subscriptions = [] # ("topic", QoS)
       for port in self.participant.definition['inports']:
@@ -309,11 +311,25 @@ class MqttEngine(Engine):
 
       # Send discovery messsage
       def send_discovery():
-        while self.participant:
+        while self.participant and self.connected:
           delay = self.discovery_period/2.2
           self._send_discovery(self.participant.definition)
           gevent.sleep(delay) # yields
       gevent.Greenlet.spawn(send_discovery)
+
+  def _on_disconnect(self, client, userdata, rc):
+      logger.debug("Disconnected with code" + str(rc))
+      self.connected = False
+
+      def try_reconnect():
+        while not self.connected:
+          logger.debug('reconnect()')
+          try:
+            self._client.reconnect()
+          except Exception as e:
+            pass
+          gevent.sleep(2.0)
+      gevent.Greenlet.spawn(try_reconnect)
 
   def _on_subscribe(self, client, userdata, mid, granted_qos):
       logger.debug('subscribed %s' % str(mid))
