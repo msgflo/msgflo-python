@@ -34,7 +34,7 @@ except (ImportError, SyntaxError) as e:
 import paho.mqtt.client as mqtt
 
 def addDefaultQueue(p, role):
-  defaultQueue = '%s.%s' % (role, p['id'].upper())
+  defaultQueue = '%s/%s' % (role, p['id'])
   p.setdefault('queue', defaultQueue)
   return p
 
