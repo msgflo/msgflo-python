@@ -1,3 +1,7 @@
+# msgflo-python 0.3.30 - released 21.11.2017
+
+* MqttEngine: Support multiple participants
+* Changed default queue convention to "$role/$port" from "$role/$PORT"
 
 # msgflo-python 0.2.0 - released 13.11.2017
 
