@@ -5,8 +5,10 @@ sys.path.append(os.path.abspath("."))
 
 try:
     from urllib.parse import urlparse
+    from urllib.parse import parse_qsl
 except ImportError:
-    from urlparse import urlparse 
+    from urlparse import urlparse
+    from urlparse import parse_qsl
 
 from optparse import OptionParser
 
@@ -248,6 +250,12 @@ class MqttEngine(Engine):
       self.participants = []
       self.connected = False
 
+      params = dict(parse_qsl(self.broker_info.query))
+      default_port = 1883
+      if self.broker_info.scheme == 'mqtts':
+        default_port = 8883
+        ca_certs = params.get('ca_certs')
+        self._client.tls_set(ca_certs=ca_certs)
       if self.broker_info.username:
         self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
 
@@ -257,9 +265,7 @@ class MqttEngine(Engine):
       self._client.on_subscribe = lambda c, u, m, q: self._on_subscribe(c, u, m, q)
 
       host = self.broker_info.hostname
-      port = self.broker_info.port
-      if port is None:
-        port = 1883
+      port = self.broker_info.port or default_port
       self._client.connect(host, port, 60)
 
   def add_participant(self, participant, iips={}):
@@ -387,9 +393,9 @@ def run(participants, broker=None, done_cb=None, iips={}):
 
     engine = None
     broker_info = urlparse(broker)
-    if broker_info.scheme == 'amqp':
+    if broker_info.scheme in ('amqp', 'amqps'):
         engine = AmqpEngine(broker)
-    elif broker_info.scheme == 'mqtt':
+    elif broker_info.scheme in ('mqtt', 'mqtts'):
         engine = MqttEngine(broker)
     else:
         raise ValueError("msgflo: No engine implementation found for broker URL scheme %s" % (broker_info.scheme,))
