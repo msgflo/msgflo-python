@@ -255,7 +255,9 @@ class MqttEngine(Engine):
       if self.broker_info.scheme == 'mqtts':
         default_port = 8883
         ca_certs = params.get('ca_certs')
-        self._client.tls_set(ca_certs=ca_certs)
+        certfile = params.get('certfile')
+        keyfile = params.get('keyfile')
+        self._client.tls_set(ca_certs=ca_certs, certfile=certfile, keyfile=keyfile)
       if self.broker_info.username:
         self._client.username_pw_set(self.broker_info.username, self.broker_info.password)
 
